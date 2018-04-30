@@ -1,3 +1,9 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+require_once '../bootstrap.php';
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -19,9 +25,14 @@
                 if(!filter_input(INPUT_POST,'run', FILTER_SANITIZE_NUMBER_INT)) {
                     echo '<p>Direct access to this page is restricted';
                 } else {
-                    include_once '../import.php';
                     echo '<h2>Order Import Log</h2>';
+                    $order_log = import('order');
                     foreach ($order_log as $ol) {
+                        echo '<p>'.$ol.'</p>';
+                    }
+                    $invoice_log = import('invoice');
+                    echo '<h2>Invoice Import Log</h2>';
+                    foreach ($invoice_log as $ol) {
                         echo '<p>'.$ol.'</p>';
                     }
                 }

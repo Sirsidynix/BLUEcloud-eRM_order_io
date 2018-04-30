@@ -150,6 +150,16 @@ class Order extends BaseClass
             }
         }
 
+        // Get the list of Acquisitions
+        $acquisitions = $resource->getResourceAcquisitions();
+
+        // skip if the order already exists
+        foreach($acquisitions as $ra) {
+            if ($ra->orderNumber == $this->orderId) {
+                throw new Exception("Order #$this->orderId already saved in coral");
+            }
+        }
+
         // Make a new resource acquisition entry
         $resourceAcquisition = new ResourceAcquisition();
 
