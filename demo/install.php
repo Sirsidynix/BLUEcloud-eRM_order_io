@@ -1,3 +1,9 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+require_once '../bootstrap.php';
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,17 +20,17 @@
 <div class="container">
     <div class="row">
         <div class="col">
-            <h1>Demo BLUEcloud ERM Order I/O</h1>
-            <h2>Import</h2>
-            <form action="/bc-management/import.php" method="post">
-                <input type="hidden" name="run" value="1">
-                <button type="submit">Import Orders/Invoices</button>
-            </form>
-            <h2>Export</h2>
-            <form action="/bc-management/export.php" method="post">
-                <input type="hidden" name="run" value="1">
-                <button type="submit">Export Orders/Invoices</button>
-            </form>
+            <h1>Demo BLUEcloud ERM Order I/O - Installation</h1>
+            <?php
+                $log = install();
+                if (empty($log)) {
+                    echo '<p>Installation successful</p>';
+                } else {
+                    foreach ($log as $ol) {
+                        echo '<p>'.$ol.'</p>';
+                    }
+                }
+            ?>
         </div>
     </div>
 </div>

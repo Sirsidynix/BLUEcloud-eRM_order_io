@@ -125,6 +125,25 @@ class Order extends BaseClass
         return $_SESSION['purchaseSites'];
     }
 
+    public function instantiateFromErm(ResourceAcquisition $resourceAcquisition) {
+
+        $purchaseSites = $resourceAcquisition->getPurchaseSites();
+        $invoices = $resourceAcquisition->getResourcePayments();
+
+        $this->orderLibrary = count($purchaseSites) > 0 ? $purchaseSites[0]->shortName : '';
+        $this->catalogKey = $resourceAcquisition->systemNumber;
+        $this->orderId = $resourceAcquisition->orderNumber;
+        $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
+        $this->isxn = $resource->isbnOrISSN[0];
+        $this->title = $resource->titleText;
+        $this->subsStartDate = $resourceAcquisition->subscriptionStartDate;
+        $this->subsEndDate = $resourceAcquisition->subscriptionEndDate;
+        // TODO: Is it sufficient to get only the first fundID?
+        $this->fundId = count($invoices) > 0 ? $invoices[0]->fundID : '';
+        $this->distributionLibraries = array_map(function($purchaseSite) {
+            return $purchaseSite->shortName;
+        }, $purchaseSites);
+    }
 
     public function importIntoErm() {
         $matches = [];

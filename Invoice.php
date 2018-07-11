@@ -25,6 +25,20 @@ class Invoice extends BaseClass
         $this->amount = $row[7];
     }
 
+    public function instantiateFromErm(ResourcePayment $resourcePayment) {
+
+        $this->invoiceId = $resourcePayment->invoiceNum;
+        $resourceAcquisition = new Resource(new NamedArguments(array('primaryKey' => $resourcePayment->resourceAcquisitionID)));
+        $this->catalogKey = $resourceAcquisition->systemNumber;
+        $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
+        $this->isxn = $resource->isbnOrISSN[0];
+        $this->title = $resource->titleText;
+        $this->subsStartDate = $resourcePayment->subscriptionStartDate;
+        $this->subsEndDate = $resourcePayment->subscriptionEndDate;
+        $this->fundId = $resourcePayment->fundID;
+        $this->amount = $resourcePayment->paymentAmount;
+    }
+
     /*
      * subsStartDate
      */
