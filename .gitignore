@@ -1,3 +1,6 @@
 .idea
-exportedOrderIds.txt
-exportedInvoiceIds.txt
+config.php
+exports/*/*
+imports/*/*
+!exports/*/.keep
+!imports/*/.keep

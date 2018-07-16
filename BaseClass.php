@@ -49,11 +49,11 @@ abstract class BaseClass {
 
     public function toFlatArray() {
         $output = [];
-        foreach($this->properties as $property) {
+        foreach($this->properties as $key => $property) {
             if (is_array($property)) {
-                $output = implode(',',$property);
+                $output[] = implode(',',$this->{$key});
             } else {
-                $output = $property;
+                $output[] = $this->{$key};
             }
         }
         return $output;

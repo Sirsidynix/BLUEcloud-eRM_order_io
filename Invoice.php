@@ -26,9 +26,9 @@ class Invoice extends BaseClass
     }
 
     public function instantiateFromErm(ResourcePayment $resourcePayment) {
-
+        // TODO: Nowhere in the CORAL interface to set an Invoice number...
         $this->invoiceId = $resourcePayment->invoiceNum;
-        $resourceAcquisition = new Resource(new NamedArguments(array('primaryKey' => $resourcePayment->resourceAcquisitionID)));
+        $resourceAcquisition = new ResourceAcquisition(new NamedArguments(array('primaryKey' => $resourcePayment->resourceAcquisitionID)));
         $this->catalogKey = $resourceAcquisition->systemNumber;
         $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
         $this->isxn = $resource->isbnOrISSN[0];
@@ -36,7 +36,8 @@ class Invoice extends BaseClass
         $this->subsStartDate = $resourcePayment->subscriptionStartDate;
         $this->subsEndDate = $resourcePayment->subscriptionEndDate;
         $this->fundId = $resourcePayment->fundID;
-        $this->amount = $resourcePayment->paymentAmount;
+        // override amount
+        $this->properties['amount'] = substr($resourcePayment->paymentAmount, 0 ,-2).'.'.substr($resourcePayment->paymentAmount, -2);
     }
 
     /*
