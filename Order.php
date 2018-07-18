@@ -134,7 +134,7 @@ class Order extends BaseClass
         $this->catalogKey = $resourceAcquisition->systemNumber;
         $this->orderId = $resourceAcquisition->orderNumber;
         $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
-        $this->isxn = $resource->isbnOrISSN[0];
+        $this->isxn = $resource->getIsbnOrIssn[0]->isbnOrIssn;
         $this->title = $resource->titleText;
         $this->subsStartDate = $resourceAcquisition->subscriptionStartDate;
         $this->subsEndDate = $resourceAcquisition->subscriptionEndDate;

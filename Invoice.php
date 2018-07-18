@@ -31,7 +31,7 @@ class Invoice extends BaseClass
         $resourceAcquisition = new ResourceAcquisition(new NamedArguments(array('primaryKey' => $resourcePayment->resourceAcquisitionID)));
         $this->catalogKey = $resourceAcquisition->systemNumber;
         $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
-        $this->isxn = $resource->isbnOrISSN[0];
+        $this->isxn = $resource->getIsbnOrIssn[0]->isbnOrIssn;
         $this->title = $resource->titleText;
         $this->subsStartDate = $resourcePayment->subscriptionStartDate;
         $this->subsEndDate = $resourcePayment->subscriptionEndDate;
