@@ -138,8 +138,9 @@ class Order extends BaseClass
         $this->title = $resource->titleText;
         $this->subsStartDate = $resourceAcquisition->subscriptionStartDate;
         $this->subsEndDate = $resourceAcquisition->subscriptionEndDate;
-        // TODO: Is it sufficient to get only the first fundID?
-        $this->fundId = count($invoices) > 0 ? $invoices[0]->fundID : '';
+        // TODO: Is it sufficient to get only the first fund code?
+        $fund = new Fund(new NamedArguments(array('primaryKey' => $invoices[0]->fundID)));
+        $this->fundId = $fund->fundCode;
         $this->distributionLibraries = array_map(function($purchaseSite) {
             return $purchaseSite->shortName;
         }, $purchaseSites);

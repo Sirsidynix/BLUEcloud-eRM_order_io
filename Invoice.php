@@ -35,7 +35,8 @@ class Invoice extends BaseClass
         $this->title = $resource->titleText;
         $this->subsStartDate = $resourcePayment->subscriptionStartDate;
         $this->subsEndDate = $resourcePayment->subscriptionEndDate;
-        $this->fundId = $resourcePayment->fundID;
+        $fund = new Fund(new NamedArguments(array('primaryKey' => $resourcePayment->fundID)));
+        $this->fundId = $fund->fundCode;
         // override amount
         $this->properties['amount'] = substr($resourcePayment->paymentAmount, 0 ,-2).'.'.substr($resourcePayment->paymentAmount, -2);
     }
