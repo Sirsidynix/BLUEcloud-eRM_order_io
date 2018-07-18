@@ -31,7 +31,7 @@ function import($type) {
     $filename = constant($uploadsDir) . "1" . '.csv';
     if(!file_exists($filename)) {
         // TODO: What type of return or error reporting is wanted?
-        $log[] = "No new orders found. Could not find file: $filename";
+        $log[] = "No new ".$type."s found. Could not find file: $filename";
     }
 
     /*
@@ -111,7 +111,7 @@ function export($install = false) {
     }
 
     if (!$install) {
-        $orderFile = fopen(ORDER_EXPORT_DIR.'/'.date('YmdHis').'.csv', 'w');
+        $orderFile = fopen(ORDER_EXPORT_DIR.date('YmdHis').'.csv', 'w');
         foreach($orders as $order) {
             fputcsv($orderFile, $order);
         }
@@ -119,7 +119,7 @@ function export($install = false) {
 
         $log[] = 'Exported '.count($orders).' Orders';
 
-        $invoiceFile = fopen(INVOICE_EXPORT_DIR.'/'.date('YmdHis').'.csv', 'w');
+        $invoiceFile = fopen(INVOICE_EXPORT_DIR.date('YmdHis').'.csv', 'w');
         foreach($invoices as $invoice) {
             fputcsv($invoiceFile, $invoice);
         }

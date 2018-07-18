@@ -2,7 +2,7 @@
 
 define('CORAL_INSTALL_DIR', '/coral/');
 define('ORDER_UPLOADS_DIR', __DIR__.'/imports/orders/');
-define('INVOICE_UPLOADS_DIR', __DIR__.'/imports/invoices');
-define('ORDER_EXPORT_DIR', __DIR__.'/exports/orders');
-define('INVOICE_EXPORT_DIR', __DIR__.'/exports/invoices');
+define('INVOICE_UPLOADS_DIR', __DIR__.'/imports/invoices/');
+define('ORDER_EXPORT_DIR', __DIR__.'/exports/orders/');
+define('INVOICE_EXPORT_DIR', __DIR__.'/exports/invoices/');
 define('BASE_DIR', CORAL_INSTALL_DIR . 'resources/');
