@@ -142,8 +142,8 @@ function export($install = false) {
 }
 
 function install() {
-    $exportedOrderCache = __DIR__.'/exportedOrderIds.txt';
-    $exportedInvoiceCache = __DIR__.'/exportedInvoiceIds.txt';
+    $exportedOrderCache = __DIR__.'/exports/exportedOrderIds.txt';
+    $exportedInvoiceCache = __DIR__.'/exports/exportedInvoiceIds.txt';
     $orderFp = fopen($exportedOrderCache, 'w');
     fclose($orderFp);
     $invoiceFp = fopen($exportedInvoiceCache, 'w');
