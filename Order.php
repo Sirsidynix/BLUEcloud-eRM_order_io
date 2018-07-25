@@ -62,10 +62,6 @@ class Order extends BaseClass
      * acquisitionTypeId
      */
     public function getAcquisitionTypeId() {
-        // Use a session variable so we don't have to query the DB for every order import
-        if(isset($_SESSION['acquisitionTypeId'])) {
-            return $_SESSION['acquisitionTypeId'];
-        }
         // TODO: What should we set the acquisition type to?
         // Find the acquisition type that is paid. If not found, get the first entry from the sorted array
         $acquisitionTypeGetter = new AcquisitionType();
@@ -74,7 +70,6 @@ class Order extends BaseClass
             $allTypes = $acquisitionTypeGetter->sortedArray();
             $paidTypeId = $allTypes[0]['acquisitionTypeID'];
         }
-        $_SESSION['acquisitionTypeId'] = $paidTypeId;
         return $paidTypeId;
     }
 
@@ -82,47 +77,35 @@ class Order extends BaseClass
      * enabledAlerts
      */
     public function getEnabledAlerts() {
-        // Use a session variable so we don't have to read the config file for every order import
-        if(isset($_SESSION['enableAlerts'])) {
-            return $_SESSION['enableAlerts'];
-        }
         $config = new Configuration();
-        $enableAlerts = $config->settings->enableAlerts == 'Y' ? 1 : 0;
-        $_SESSION['enableAlerts'] = $enableAlerts;
-        return $enableAlerts;
+        return $config->settings->enableAlerts == 'Y' ? 1 : 0;
     }
 
     /*
      * purchaseSites
      */
     public function purchaseSites() {
-        // Use a session variable so we don't have to read the db for every order import
-        $newSites = false;
-        if(empty($_SESSION['purchaseSites'])) {
-            $newSites = true;
-        } else {
-            foreach($this->distributionLibraries as $library) {
-                if(!in_array($library, $_SESSION['purchaseSites'])) {
-                    $newSite = new PurchaseSite();
-                    $newSite->shortName = $library;
-                    try {
-                        $newSite->save();
-                    } catch(Exception $e) {
-                        throw new Exception("There was a problem creating a new purchase site $library. Error: ".$e->getMessage());
-                    }
-                    $newSites = true;
+        $purchaseSitesGetter = new PurchaseSite();
+        $purchaseSites = array();
+        foreach($purchaseSitesGetter->allAsArray() as $site) {
+            $purchaseSites[$site['purchaseSiteID']] = $site['shortName'];
+        }
+        foreach($this->distributionLibraries as $library) {
+            if(!in_array($library, $purchaseSites)) {
+                $newSite = new PurchaseSite();
+                $newSite->shortName = $library;
+                try {
+                    $newSite->save();
+                } catch(Exception $e) {
+                    throw new Exception("There was a problem creating a new purchase site $library. Error: ".$e->getMessage());
                 }
             }
         }
-        if($newSites) {
-            $purchaseSitesGetter = new PurchaseSite();
-            $purchaseSites = array();
-            foreach($purchaseSitesGetter->allAsArray() as $site) {
-                $purchaseSites[$site['purchaseSiteID']] = $site['shortName'];
-            }
-            $_SESSION['purchaseSites'] = $purchaseSites;
+        $purchaseSites = array();
+        foreach($purchaseSitesGetter->allAsArray() as $site) {
+            $purchaseSites[$site['purchaseSiteID']] = $site['shortName'];
         }
-        return $_SESSION['purchaseSites'];
+        return $purchaseSites;
     }
 
     public function instantiateFromErm(ResourceAcquisition $resourceAcquisition) {

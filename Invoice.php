@@ -73,24 +73,14 @@ class Invoice extends BaseClass
      * defaultCurrency
      */
     public function getDefaultCurrency() {
-        // Use a session variable so we don't have to read the config file for every order import
-        if(isset($_SESSION['defaultCurrency'])) {
-            return $_SESSION['defaultCurrency'];
-        }
         $config = new Configuration();
-        $defaultCurrency = $config->settings->defaultCurrency;
-        $_SESSION['defaultCurrency'] = $defaultCurrency;
-        return $defaultCurrency;
+        return $config->settings->defaultCurrency;
     }
 
     /*
      * orderTypeId
      */
     public function getOrderTypeId() {
-        // Use a session variable so we don't have to query the DB for every order import
-        if(isset($_SESSION['orderTypeId'])) {
-            return $_SESSION['orderTypeId'];
-        }
         // TODO: What should we set the order type to?
         // Find the order type that is ongoing. If not found, get the first entry from the sorted array
         $orderTypeGetter = new OrderType();
@@ -106,41 +96,35 @@ class Invoice extends BaseClass
             $orderType = $orderTypes[0];
         }
 
-        $orderTypeId = $orderType['orderTypeID'];
-        $_SESSION['orderTypeId'] = $orderTypeId;
-        return $orderTypeId;
+        return $orderType['orderTypeID'];
     }
 
     /*
      * coralFundId
      */
+    public function funds () {
+        $fundGetter = new Fund();
+        $funds = array();
+        foreach($fundGetter->allAsArray() as $fund) {
+            $funds[$fund['fundID']] = $fund['shortName'];
+        }
+        return $funds;
+    }
+
     public function getCoralFundId() {
-        // Use a session variable so we don't have to read the db for every order import
-        $newFunds = false;
-        if(empty($_SESSION['coralFunds'])) {
-            $newFunds = true;
-        } else {
-            if(!in_array($this->fundId, $_SESSION['coralFunds'])) {
-                $newFund = new Fund();
-                $newFund->shortName = $this->fundId;
-                $newFund->fundCode = $this->fundId;
-                try {
-                    $newFund->save();
-                } catch(Exception $e) {
-                    throw new Exception("There was a problem creating a new fund $this->fundId. Error: ".$e->getMessage());
-                }
-                $newFunds = true;
+
+        if(!in_array($this->fundId, $this->funds())) {
+            $newFund = new Fund();
+            $newFund->shortName = $this->fundId;
+            $newFund->fundCode = $this->fundId;
+            $newFund->archived = 0;
+            try {
+                $newFund->save();
+            } catch(Exception $e) {
+                throw new Exception("There was a problem creating a new fund $this->fundId. Error: ".$e->getMessage());
             }
         }
-        if($newFunds) {
-            $fundGetter = new Fund();
-            $funds = array();
-            foreach($fundGetter->allAsArray() as $fund) {
-                $funds[$fund['fundID']] = $fund['shortName'];
-            }
-            $_SESSION['coralFunds'] = $funds;
-        }
-        return array_search($this->fundId, $_SESSION['coralFunds']);
+        return array_search($this->fundId, $this->funds());
     }
 
     public function importIntoErm() {
@@ -170,9 +154,18 @@ class Invoice extends BaseClass
         // Get the list of Acquisitions
         $acquisitions = $resource->getResourceAcquisitions();
 
+        if (count($acquisitions) < 1) {
+            throw new Exception("Invoice #$this->invoiceId has no matching order.");
+        } else {
+            $matchingAcquisition = false;
+        }
+
         // Add invoice to each matching order
         foreach($acquisitions as $ra) {
             if ($ra->subscriptionStartDate == $this->subsStartDate && $ra->subscriptionEndDate == $this->subsEndDate) {
+                // indicate there is a match
+                $matchingAcquisition = true;
+
                 // create an array of already existing invoices
                 $existingInvocies = [];
                 $invoices = $ra->getResourcePayments();
@@ -181,7 +174,7 @@ class Invoice extends BaseClass
                 }
                 //skip if the invoice already exists
                 if(in_array($this->invoiceId, $existingInvocies)){
-                    throw new Exception("Invoice #$this->invoiceId already saved in coral");
+                    throw new Exception(" Invoice #$this->invoiceId already saved in coral");
                     continue;
                 }
 
@@ -192,6 +185,11 @@ class Invoice extends BaseClass
                     throw new Exception("There was a problem creating a new invoice for $this->title. Please contact your administrator. Error: ".$e->getMessage());
                 }
             }
+        }
+
+        // If there are not matches, return error
+        if (!$matchingAcquisition) {
+            throw new Exception("Invoice #$this->invoiceId has no matching order.");
         }
 
         return true;
