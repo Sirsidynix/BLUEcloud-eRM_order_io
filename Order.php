@@ -60,29 +60,6 @@ class Order extends IO
     }
 
     /*
-     * acquisitionTypeId
-     */
-    public function getAcquisitionTypeId() {
-        // TODO: What should we set the acquisition type to?
-        // Find the acquisition type that is paid. If not found, get the first entry from the sorted array
-        $acquisitionTypeGetter = new AcquisitionType();
-        $paidTypeId = $acquisitionTypeGetter->getAcquisitionTypeIDByName('paid');
-        if(empty($paidTypeId)){
-            $allTypes = $acquisitionTypeGetter->sortedArray();
-            $paidTypeId = $allTypes[0]['acquisitionTypeID'];
-        }
-        return $paidTypeId;
-    }
-
-    /*
-     * enabledAlerts
-     */
-    public function getEnabledAlerts() {
-        $config = new Configuration();
-        return $config->settings->enableAlerts == 'Y' ? 1 : 0;
-    }
-
-    /*
      * purchaseSites
      */
     public function purchaseSites() {
@@ -150,23 +127,8 @@ class Order extends IO
             $resourceAcquisition = new ResourceAcquisition();
         }
 
-        // Note: the following code should align with creating a new RA in coral, /resources/ajax_processing/submitAcquisitions.php
-        $resourceAcquisition->resourceID = $resource->resourceID;
-        $resourceAcquisition->subscriptionStartDate = $this->subsStartDate;
-        $resourceAcquisition->subscriptionEndDate = $this->subsEndDate;
-        $resourceAcquisition->acquisitionTypeID = $this->acquisitionTypeId;
-        $resourceAcquisition->orderNumber = $this->orderId;
-        // TODO: What is system number? Putting cat key
-        $resourceAcquisition->systemNumber = $this->catalogKey;
-        $resourceAcquisition->subscriptionAlertEnabledInd = $this->enabledAlerts;
-        // TODO: what to do about organization
-        $resourceAcquisition->organizationID = null;
-
-        try {
-            $resourceAcquisition->save();
-        } catch(Exception $e) {
-            throw new Exception("There was a problem creating a new order for $this->title. Please contact your administrator. Error: ".$e->getMessage());
-        }
+        $resourceAcquisition = $this->createOrUpdateResourceAcquisition($resourceAcquisition, $resource->resourceID,
+            $this->subsStartDate, $this->subsEndDate, $this->orderId, $this->catalogKey);
 
         //add sites from order
         $resourceAcquisitionID = $resourceAcquisition->resourceAcquisitionID;

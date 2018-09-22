@@ -86,14 +86,14 @@ class Invoice extends IO
         $fundGetter = new Fund();
         $funds = array();
         foreach($fundGetter->allAsArray() as $fund) {
-            $funds[$fund['fundID']] = $fund['shortName'];
+            $funds[$fund['fundID']] = $fund['fundCode'];
         }
         return $funds;
     }
 
     public function getCoralFundId() {
-
-        if(!in_array($this->fundId, $this->funds())) {
+        $funds = $this->funds();
+        if(!in_array($this->fundId, $funds)) {
             $newFund = new Fund();
             $newFund->shortName = $this->fundId;
             $newFund->fundCode = $this->fundId;
@@ -103,8 +103,9 @@ class Invoice extends IO
             } catch(Exception $e) {
                 throw new Exception("There was a problem creating a new fund $this->fundId. Error: ".$e->getMessage());
             }
+            $funds = $this->funds();
         }
-        return array_search($this->fundId, $this->funds());
+        return array_search($this->fundId, $funds);
     }
 
     public function importIntoErm() {
@@ -133,12 +134,6 @@ class Invoice extends IO
         // Get the list of Acquisitions
         $acquisitions = $resource->getResourceAcquisitions();
 
-        if (count($acquisitions) < 1) {
-            throw new Exception("Invoice #$this->invoiceId has no matching order.1");
-        } else {
-            $matchingAcquisition = false;
-        }
-
         // Add invoice to each matching order
         if ($new) {
             $matchingAcquisition = $acquisitions[0];
@@ -151,10 +146,11 @@ class Invoice extends IO
                     $matchingAcquisition = $ra;
                 }
             }
-        }
-        // If there are not matches, return error
-        if (empty($matchingAcquisition)) {
-            throw new Exception("Invoice #$this->invoiceId has no matching order.");
+            // create a new order if there are no matches
+            if (empty($matchingAcquisition)) {
+                $matchingAcquisition = $this->createOrUpdateResourceAcquisition(new ResourceAcquisition, $resource->resourceID,
+                    $this->subsStartDate, $this->subsEndDate, "Order created from Invoice #$this->invoiceNum", $this->catalogKey);
+            }
         }
 
 

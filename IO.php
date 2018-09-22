@@ -103,4 +103,49 @@ class IO extends BaseClass
 
         return $resource;
     }
+
+    /*
+     * enabledAlerts
+     */
+    public function getEnabledAlerts() {
+        $config = new Configuration();
+        return $config->settings->enableAlerts == 'Y' ? 1 : 0;
+    }
+
+    /*
+     * acquisitionTypeId
+     */
+    public function getAcquisitionTypeId() {
+        // TODO: What should we set the acquisition type to?
+        // Find the acquisition type that is paid. If not found, get the first entry from the sorted array
+        $acquisitionTypeGetter = new AcquisitionType();
+        $paidTypeId = $acquisitionTypeGetter->getAcquisitionTypeIDByName('paid');
+        if(empty($paidTypeId)){
+            $allTypes = $acquisitionTypeGetter->sortedArray();
+            $paidTypeId = $allTypes[0]['acquisitionTypeID'];
+        }
+        return $paidTypeId;
+    }
+
+    public function createOrUpdateResourceAcquisition($ra, $resourceId, $start, $end, $orderNum, $systemNum) {
+        // Note: the following code should align with creating a new RA in coral, /resources/ajax_processing/submitAcquisitions.php
+        $ra->resourceID = $resourceId;
+        $ra->subscriptionStartDate = $start;
+        $ra->subscriptionEndDate = $end;
+        $ra->acquisitionTypeID = $this->acquisitionTypeId;
+        $ra->orderNumber = $orderNum;
+        // TODO: What is system number? Putting cat key
+        $ra->systemNumber = $systemNum;
+        $ra->subscriptionAlertEnabledInd = $this->enabledAlerts;
+        // TODO: what to do about organization
+        $ra->organizationID = null;
+
+        try {
+            $ra->save();
+        } catch(Exception $e) {
+            throw new Exception("There was a problem creating a new order for $orderNum. Please contact your administrator. Error: ".$e->getMessage());
+        }
+
+        return $ra;
+    }
 }
