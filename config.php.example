@@ -1,8 +1,8 @@
 <?php
 
 define('CORAL_INSTALL_DIR', '/coral/');
-define('ORDER_UPLOADS_DIR', __DIR__.'/imports/orders/');
-define('INVOICE_UPLOADS_DIR', __DIR__.'/imports/invoices/');
-define('ORDER_EXPORT_DIR', __DIR__.'/exports/orders/');
-define('INVOICE_EXPORT_DIR', __DIR__.'/exports/invoices/');
+define('ORDER_UPLOADS_FILE', __DIR__.'/imports/orders/eRM_order_data.csv');
+define('INVOICE_UPLOADS_FILE', __DIR__.'/imports/invoices/eRM_invoice_data.csv');
+define('ORDER_EXPORT_FILE', __DIR__.'/exports/orders/eRM_order_data.csv');
+define('INVOICE_EXPORT_FILE', __DIR__.'/exports/invoices/eRM_invoice_data.csv');
 define('BASE_DIR', CORAL_INSTALL_DIR . 'resources/');

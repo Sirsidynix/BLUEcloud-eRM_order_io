@@ -58,5 +58,4 @@ abstract class BaseClass {
         }
         return $output;
     }
-
 }

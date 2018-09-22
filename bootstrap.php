@@ -26,9 +26,7 @@ function import($type) {
     /*
      * Retrieve the CSV file
      */
-    // TODO: Figure out how to get filename. One file per day? Previous day, current?
-    $uploadsDir = strtoupper($type).'_UPLOADS_DIR';
-    $filename = constant($uploadsDir) . "1" . '.csv';
+    $filename = constant(strtoupper($type).'_UPLOADS_FILE');
     if(!file_exists($filename)) {
         // TODO: What type of return or error reporting is wanted?
         $log[] = "No new ".$type."s found. Could not find file: $filename";
@@ -111,7 +109,7 @@ function export($install = false) {
     }
 
     if (!$install) {
-        $orderFile = fopen(ORDER_EXPORT_DIR.date('YmdHis').'.csv', 'w');
+        $orderFile = fopen(ORDER_EXPORT_FILE, 'w');
         foreach($orders as $order) {
             fputcsv($orderFile, $order);
         }
@@ -119,7 +117,7 @@ function export($install = false) {
 
         $log[] = 'Exported '.count($orders).' Orders';
 
-        $invoiceFile = fopen(INVOICE_EXPORT_DIR.date('YmdHis').'.csv', 'w');
+        $invoiceFile = fopen(INVOICE_EXPORT_FILE, 'w');
         foreach($invoices as $invoice) {
             fputcsv($invoiceFile, $invoice);
         }

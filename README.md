@@ -11,18 +11,18 @@ Imports and exports order/invoice information from a CSV.
 var name | description
 --- | ---
 CORAL_INSTALL_DIR | the directory on the server that coral is installed
-ORDER_UPLOADS_DIR | the directory on the server that the order CSVs will be uploaded to
-INVOICE_UPLOADS_DIR | the directory on the server that the invoice CSVs will be uploaded to
-ORDER_EXPORT_DIR | the directory in which the scripts should deposit the order export CSV
-INVOICE_EXPORT_DIR | the directory in which the scripts should deposit the invoice export CSV 
+ORDER_UPLOAD_FILE | the absolute filename where the nightly order import CSVs are saved
+INVOICE_UPLOAD_FILE | the absolute filename where the nightly invoice import CSVs are saved
+ORDER_EXPORT_FILE | the absolute filename where the nightly order export CSVs are saved
+INVOICE_EXPORT_FILE | the absolute filename where the nightly invoice export CSVs are saved 
 
-- install the script `php run.php install`
+- install the script `php $PROJECT_ROOT/run.php install`
 
 ### Usage
 Set up a cron job to run the following commands:
 
 __For exporting__
-`php run.php export`
+`php $PROJECT_ROOT/run.php export`
 
 __For importing__ 
-`php run.php import`
+`php $PROJECT_ROOT/run.php import`

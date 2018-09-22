@@ -1,6 +1,6 @@
 <?php
 
-class Order extends BaseClass
+class Order extends IO
 {
 
     protected $properties = [
@@ -27,24 +27,25 @@ class Order extends BaseClass
         $this->distributionLibraries = $row[8];
     }
 
-    /*
-     * subsStartDate
-     */
-    public function getSubsStartDate() {
-        return $this->properties['subsStartDate']->format("Y-m-d");
-    }
-    public function setSubsStartDate($value) {
-        return new DateTime($value);
-    }
+    public function instantiateFromErm(ResourceAcquisition $resourceAcquisition) {
 
-    /*
-     * subsEndDate
-     */
-    public function getSubsEndDate() {
-        return $this->properties['subsEndDate']->format("Y-m-d");
-    }
-    public function setSubsEndDate($value) {
-        return new DateTime($value);
+        $purchaseSites = $resourceAcquisition->getPurchaseSites();
+        $invoices = $resourceAcquisition->getResourcePayments();
+
+        $this->orderLibrary = count($purchaseSites) > 0 ? $purchaseSites[0]->shortName : '';
+        $this->catalogKey = $resourceAcquisition->systemNumber;
+        $this->orderId = $resourceAcquisition->orderNumber;
+        $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
+        $this->isxn = $resource->getIsbnOrIssn[0]->isbnOrIssn;
+        $this->title = $resource->titleText;
+        $this->subsStartDate = $resourceAcquisition->subscriptionStartDate;
+        $this->subsEndDate = $resourceAcquisition->subscriptionEndDate;
+        // TODO: Is it sufficient to get only the first fund code?
+        $fund = new Fund(new NamedArguments(array('primaryKey' => $invoices[0]->fundID)));
+        $this->fundId = $fund->fundCode;
+        $this->distributionLibraries = array_map(function($purchaseSite) {
+            return $purchaseSite->shortName;
+        }, $purchaseSites);
     }
 
     /*
@@ -108,29 +109,10 @@ class Order extends BaseClass
         return $purchaseSites;
     }
 
-    public function instantiateFromErm(ResourceAcquisition $resourceAcquisition) {
-
-        $purchaseSites = $resourceAcquisition->getPurchaseSites();
-        $invoices = $resourceAcquisition->getResourcePayments();
-
-        $this->orderLibrary = count($purchaseSites) > 0 ? $purchaseSites[0]->shortName : '';
-        $this->catalogKey = $resourceAcquisition->systemNumber;
-        $this->orderId = $resourceAcquisition->orderNumber;
-        $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
-        $this->isxn = $resource->getIsbnOrIssn[0]->isbnOrIssn;
-        $this->title = $resource->titleText;
-        $this->subsStartDate = $resourceAcquisition->subscriptionStartDate;
-        $this->subsEndDate = $resourceAcquisition->subscriptionEndDate;
-        // TODO: Is it sufficient to get only the first fund code?
-        $fund = new Fund(new NamedArguments(array('primaryKey' => $invoices[0]->fundID)));
-        $this->fundId = $fund->fundCode;
-        $this->distributionLibraries = array_map(function($purchaseSite) {
-            return $purchaseSite->shortName;
-        }, $purchaseSites);
-    }
 
     public function importIntoErm() {
         $matches = [];
+        $new = false;
         // Find matching resource
         $resource = new Resource();
         // need to put isxn in variable, because empty returns true with magic __get method
@@ -138,18 +120,16 @@ class Order extends BaseClass
         if(!empty($isxn)){
             $matches = $resource->getResourceByIsbnOrISSN($isxn);
         }
-        if (count($matches) > 1) {
-            throw new Exception("More than one resource matched ISXN: $this->isxn");
-        } elseif (count($matches) == 1) {
+        if (count($matches) > 0) {
             $resource = $matches[0];
         } else {
             $matches = $resource->getResourceByTitle($this->title);
-            if (count($matches) > 1) {
-                throw new Exception("More than one resource matched title: $this->title");
-            } elseif (count($matches) == 1) {
-                $resource = $matches[0];
+            if (count($matches) == 0) {
+                // Create a new resource
+                $resource = $this->createNewResource();
+                $new = true;
             } else {
-                throw new Exception("Could not find a matching resource: $this->title, ISXN: $this->isxn");
+                $resource = $matches[0];
             }
         }
 
@@ -164,7 +144,11 @@ class Order extends BaseClass
         }
 
         // Make a new resource acquisition entry
-        $resourceAcquisition = new ResourceAcquisition();
+        if ($new) {
+            $resourceAcquisition = $acquisitions[0];
+        } else {
+            $resourceAcquisition = new ResourceAcquisition();
+        }
 
         // Note: the following code should align with creating a new RA in coral, /resources/ajax_processing/submitAcquisitions.php
         $resourceAcquisition->resourceID = $resource->resourceID;

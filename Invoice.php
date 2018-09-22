@@ -1,6 +1,6 @@
 <?php
 
-class Invoice extends BaseClass
+class Invoice extends IO
 {
 
     protected $properties = [
@@ -39,26 +39,6 @@ class Invoice extends BaseClass
         $this->fundId = $fund->fundCode;
         // override amount
         $this->properties['amount'] = substr($resourcePayment->paymentAmount, 0 ,-2).'.'.substr($resourcePayment->paymentAmount, -2);
-    }
-
-    /*
-     * subsStartDate
-     */
-    public function getSubsStartDate() {
-        return $this->properties['subsStartDate']->format("Y-m-d");
-    }
-    public function setSubsStartDate($value) {
-        return new DateTime($value);
-    }
-
-    /*
-     * subsEndDate
-     */
-    public function getSubsEndDate() {
-        return $this->properties['subsEndDate']->format("Y-m-d");
-    }
-    public function setSubsEndDate($value) {
-        return new DateTime($value);
     }
 
     /*
@@ -129,6 +109,7 @@ class Invoice extends BaseClass
 
     public function importIntoErm() {
         $matches = [];
+        $new = false;
         // Find matching resource
         $resource = new Resource();
         // need to put isxn in variable, because empty returns true with magic __get method
@@ -136,18 +117,16 @@ class Invoice extends BaseClass
         if(!empty($isxn)){
             $matches = $resource->getResourceByIsbnOrISSN($isxn);
         }
-        if (count($matches) > 1) {
-            throw new Exception("More than one resource matched ISXN: $this->isxn");
-        } elseif (count($matches) == 1) {
-            $resource = $matches[0];
+        if (count($matches) > 0) {
+            $resource =  $matches[0];
         } else {
             $matches = $resource->getResourceByTitle($this->title);
-            if (count($matches) > 1) {
-                throw new Exception("More than one resource matched title: $this->title");
-            } elseif (count($matches) == 1) {
+            if (count($matches) > 0) {
                 $resource = $matches[0];
             } else {
-                throw new Exception("Could not find a matching resource: $this->title, ISXN: $this->isxn");
+                // Create a new resource
+                $resource = $this->createNewResource();
+                $new = true;
             }
         }
 
@@ -155,41 +134,46 @@ class Invoice extends BaseClass
         $acquisitions = $resource->getResourceAcquisitions();
 
         if (count($acquisitions) < 1) {
-            throw new Exception("Invoice #$this->invoiceId has no matching order.");
+            throw new Exception("Invoice #$this->invoiceId has no matching order.1");
         } else {
             $matchingAcquisition = false;
         }
 
         // Add invoice to each matching order
-        foreach($acquisitions as $ra) {
-            if ($ra->subscriptionStartDate == $this->subsStartDate && $ra->subscriptionEndDate == $this->subsEndDate) {
-                // indicate there is a match
-                $matchingAcquisition = true;
-
-                // create an array of already existing invoices
-                $existingInvocies = [];
-                $invoices = $ra->getResourcePayments();
-                foreach($invoices as $i) {
-                    $existingInvocies[] = $i->invoiceNum;
-                }
-                //skip if the invoice already exists
-                if(in_array($this->invoiceId, $existingInvocies)){
-                    throw new Exception(" Invoice #$this->invoiceId already saved in coral");
-                    continue;
-                }
-
-                $resourcePayment = $this->createResourcePayment($ra->resourceAcquisitionID);
-                try {
-                    $resourcePayment->save();
-                } catch (Exception $e) {
-                    throw new Exception("There was a problem creating a new invoice for $this->title. Please contact your administrator. Error: ".$e->getMessage());
+        if ($new) {
+            $matchingAcquisition = $acquisitions[0];
+            $matchingAcquisition->subscriptionStartDate = $this->subsStartDate;
+            $matchingAcquisition->subscriptionEndDate = $this->subsEndDate;
+            $matchingAcquisition->save();
+        } else {
+            foreach($acquisitions as $ra) {
+                if ($ra->subscriptionStartDate == $this->subsStartDate && $ra->subscriptionEndDate == $this->subsEndDate) {
+                    $matchingAcquisition = $ra;
                 }
             }
         }
-
         // If there are not matches, return error
-        if (!$matchingAcquisition) {
+        if (empty($matchingAcquisition)) {
             throw new Exception("Invoice #$this->invoiceId has no matching order.");
+        }
+
+
+        // create an array of already existing invoices
+        $existingInvocies = [];
+        $invoices = $matchingAcquisition->getResourcePayments();
+        foreach($invoices as $i) {
+            $existingInvocies[] = $i->invoiceNum;
+        }
+        //skip if the invoice already exists
+        if(in_array($this->invoiceId, $existingInvocies)){
+            throw new Exception(" Invoice #$this->invoiceId already saved in coral");
+        }
+
+        $resourcePayment = $this->createResourcePayment($matchingAcquisition->resourceAcquisitionID);
+        try {
+            $resourcePayment->save();
+        } catch (Exception $e) {
+            throw new Exception("There was a problem creating a new invoice for $this->title. Please contact your administrator. Error: ".$e->getMessage());
         }
 
         return true;
