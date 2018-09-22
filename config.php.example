@@ -1,6 +1,6 @@
 <?php
 
-define('CORAL_INSTALL_DIR', '/coral/');
+define('CORAL_INSTALL_DIR', '/software/coral/');
 define('ORDER_UPLOADS_FILE', __DIR__.'/imports/orders/eRM_order_data.csv');
 define('INVOICE_UPLOADS_FILE', __DIR__.'/imports/invoices/eRM_invoice_data.csv');
 define('ORDER_EXPORT_FILE', __DIR__.'/exports/orders/eRM_order_data.csv');
