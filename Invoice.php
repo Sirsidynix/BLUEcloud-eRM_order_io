@@ -158,11 +158,12 @@ class Invoice extends IO
         $existingInvocies = [];
         $invoices = $matchingAcquisition->getResourcePayments();
         foreach($invoices as $i) {
-            $existingInvocies[] = $i->invoiceNum;
+            $existingInvocies[] = $i->invoiceNum.$i->fundID;
         }
         //skip if the invoice already exists
-        if(in_array($this->invoiceId, $existingInvocies)){
-            throw new Exception(" Invoice #$this->invoiceId already saved in coral");
+        $uniqueId = $this->invoiceId.$this->coralFundId;
+        if(in_array($uniqueId, $existingInvocies)){
+            throw new Exception(" Invoice #$this->invoiceId with fund ID $this->coralFundId already saved in coral");
         }
 
         $resourcePayment = $this->createResourcePayment($matchingAcquisition->resourceAcquisitionID);
