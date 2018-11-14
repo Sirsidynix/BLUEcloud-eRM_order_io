@@ -46,16 +46,4 @@ abstract class BaseClass {
     protected static function setterMethod($name){
         return 'set'.ucfirst($name);
     }
-
-    public function toFlatArray() {
-        $output = [];
-        foreach($this->properties as $key => $property) {
-            if (is_array($property)) {
-                $output[] = implode(',',$this->{$key});
-            } else {
-                $output[] = $this->{$key};
-            }
-        }
-        return $output;
-    }
 }

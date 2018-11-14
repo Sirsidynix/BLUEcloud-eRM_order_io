@@ -25,22 +25,6 @@ class Invoice extends IO
         $this->amount = $row[7];
     }
 
-    public function instantiateFromErm(ResourcePayment $resourcePayment) {
-        // TODO: Nowhere in the CORAL interface to set an Invoice number...
-        $this->invoiceId = $resourcePayment->invoiceNum;
-        $resourceAcquisition = new ResourceAcquisition(new NamedArguments(array('primaryKey' => $resourcePayment->resourceAcquisitionID)));
-        $this->catalogKey = $resourceAcquisition->systemNumber;
-        $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
-        $this->isxn = $resource->getIsbnOrIssn[0]->isbnOrIssn;
-        $this->title = $resource->titleText;
-        $this->subsStartDate = $resourcePayment->subscriptionStartDate;
-        $this->subsEndDate = $resourcePayment->subscriptionEndDate;
-        $fund = new Fund(new NamedArguments(array('primaryKey' => $resourcePayment->fundID)));
-        $this->fundId = $fund->fundCode;
-        // override amount
-        $this->properties['amount'] = substr($resourcePayment->paymentAmount, 0 ,-2).'.'.substr($resourcePayment->paymentAmount, -2);
-    }
-
     /*
      * amount
      */
@@ -110,7 +94,8 @@ class Invoice extends IO
 
     public function importIntoErm() {
         $matches = [];
-        $new = false;
+        $createdNewResource = false;
+        $createdNewInvoice = false;
         // Find matching resource
         $resource = new Resource();
         // need to put isxn in variable, because empty returns true with magic __get method
@@ -135,7 +120,7 @@ class Invoice extends IO
         $acquisitions = $resource->getResourceAcquisitions();
 
         // Add invoice to each matching order
-        if ($new) {
+        if ($createdNewResource) {
             $matchingAcquisition = $acquisitions[0];
             $matchingAcquisition->subscriptionStartDate = $this->subsStartDate;
             $matchingAcquisition->subscriptionEndDate = $this->subsEndDate;
@@ -149,7 +134,7 @@ class Invoice extends IO
             // create a new order if there are no matches
             if (empty($matchingAcquisition)) {
                 $matchingAcquisition = $this->createOrUpdateResourceAcquisition(new ResourceAcquisition, $resource->resourceID,
-                    $this->subsStartDate, $this->subsEndDate, "Order created from Invoice #$this->invoiceNum", $this->catalogKey);
+                    $this->subsStartDate, $this->subsEndDate, "Order created from Invoice #$this->invoiceId", $this->catalogKey);
             }
         }
 
@@ -158,28 +143,18 @@ class Invoice extends IO
         $existingInvocies = [];
         $invoices = $matchingAcquisition->getResourcePayments();
         foreach($invoices as $i) {
-            $existingInvocies[] = $i->invoiceNum.$i->fundID;
-        }
-        //skip if the invoice already exists
-        $uniqueId = $this->invoiceId.$this->coralFundId;
-        if(in_array($uniqueId, $existingInvocies)){
-            throw new Exception(" Invoice #$this->invoiceId with fund ID $this->coralFundId already saved in coral");
+            if ($this->invoiceId.$this->coralFundId == $i->invoiceNum.$i->fundID) {
+                $resourcePayment = $i;
+            }
         }
 
-        $resourcePayment = $this->createResourcePayment($matchingAcquisition->resourceAcquisitionID);
-        try {
-            $resourcePayment->save();
-        } catch (Exception $e) {
-            throw new Exception("There was a problem creating a new invoice for $this->title. Please contact your administrator. Error: ".$e->getMessage());
+        // Create new payment if does not already exist
+        if (empty($resourcePayment)) {
+            $resourcePayment = new ResourcePayment();
+            $createdNewInvoice = true;
         }
 
-        return true;
-    }
-
-    public function createResourcePayment($resourceAcquisitionId) {
-        // Note: the following code should align with creating a new RA in coral, /resources/ajax_processing/submitCost.php
-        $resourcePayment = new ResourcePayment();
-        $resourcePayment->resourceAcquisitionID = $resourceAcquisitionId;
+        $resourcePayment->resourceAcquisitionID = $matchingAcquisition->resourceAcquisitionID;
         $resourcePayment->year = $this->properties['subsStartDate']->format('Y');
         $resourcePayment->subscriptionStartDate = $this->subsStartDate;
         $resourcePayment->subscriptionEndDate   = $this->subsEndDate;
@@ -189,6 +164,13 @@ class Invoice extends IO
         $resourcePayment->orderTypeID = $this->orderTypeId;
         $resourcePayment->costNote = '';
         $resourcePayment->invoiceNum = $this->invoiceId;
-        return $resourcePayment;
+
+        try {
+            $resourcePayment->save();
+        } catch (Exception $e) {
+            throw new Exception("There was a problem creating a new invoice for $this->title. Please contact your administrator. Error: ".$e->getMessage());
+        }
+
+        return sprintf("Invoice #%s for Resource #%s (%s) %s", $this->invoiceId, $resource->resourceID, $resource->titleText, $createdNewInvoice ? 'created' : 'updated');
     }
 }

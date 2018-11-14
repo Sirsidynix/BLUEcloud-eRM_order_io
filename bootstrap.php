@@ -20,6 +20,10 @@ spl_autoload_register(function ($class_name) {
     include $file;
 });
 
+function logMessage($message) {
+    return sprintf("[%s] -- %s", date(DATE_ISO8601), $message);
+}
+
 function import($type) {
     $log = [];
     $classname = ucfirst($type);
@@ -29,7 +33,7 @@ function import($type) {
     $filename = constant(strtoupper($type).'_UPLOADS_FILE');
     if(!file_exists($filename)) {
         // TODO: What type of return or error reporting is wanted?
-        $log[] = "No new ".$type."s found. Could not find file: $filename";
+        $log[] = logMessage("No new ".$type."s found. Could not find file: $filename");
     }
 
     /*
@@ -41,110 +45,47 @@ function import($type) {
             $item = new $classname;
             $item->instantiateFromCsv($data);
             try {
-                $item->importIntoErm();
+                $log[] = logMessage($item->importIntoErm());
                 $count ++;
             } catch(Exception $e) {
-                $log[] = $e->getMessage();
+                $log[] = logMessage($e->getMessage());
             }
         }
         fclose($handle);
     }
-    array_unshift($log, "$count $type(s) imported.");
-
-    return $log;
+    array_unshift($log, logMessage("$count $type(s) imported."));
+    $logFile = dirname(constant(strtoupper($type).'_UPLOADS_FILE'))."/import-$type-".date('Y_m_d').'.log';
+    $handle = fopen($logFile, "w");
+    fwrite($handle, implode("\r\n", $log)."\r\n");
 }
 
-function export($install = false) {
+function export() {
     $log = [];
-
-    $exportedOrderCache = __DIR__.'/exports/exportedOrderIds.txt';
-    $exportedInvoiceCache = __DIR__.'/exports/exportedInvoiceIds.txt';
-    if ($install) {
-        $exportedOrders = [];
-        $exportedInvoices = [];
-    } else {
-        if (!file_exists($exportedOrderCache)) {
-            $log[] = ("Could not find the exported orders cache file");
-        }
-        if (!file_exists($exportedInvoiceCache)) {
-            $log[] = ("Could not find the exported invoices cache file");
-        }
-        if (!file_exists($exportedOrderCache) || !file_exists($exportedInvoiceCache)) {
-            return $log;
-        }
-        $exportedOrders = explode(',',file_get_contents($exportedOrderCache));
-        $exportedInvoices = explode(',',file_get_contents($exportedInvoiceCache));
-    }
 
     $getter = new ResourceAcquisition();
     $resourceAcqusitions = $getter->all();
 
-    // TODO: What will the naming convention be?
-    if ($install) {
-        $orderFile = null;
-        $invoiceFile = null;
-    } else {
-
-    }
-
     $orders = [];
-    $invoices = [];
 
     foreach ($resourceAcqusitions as $ra) {
-        if (!in_array($ra->resourceAcquisitionID, $exportedOrders)) {
-            $order = new Order();
+        $order = new Order();
+        try {
             $order->instantiateFromErm($ra);
-            $exportedOrders[] = $ra->resourceAcquisitionID;
             $orders[] = $order->toFlatArray();
-        }
-        $resourcePayments = $ra->getResourcePayments();
-        foreach ($resourcePayments as $payment) {
-            if (!in_array($payment->resourcePaymentID, $exportedInvoices)) {
-                $invoice = new Invoice();
-                $invoice->instantiateFromErm($payment);
-                $invoices[] = $invoice->toFlatArray();
-                $exportedInvoices[] = $payment->resourcePaymentID;
-            }
+        } catch (Exception $e) {
+            $log[] = logMessage($e->getMessage());
         }
     }
 
-    if (!$install) {
-        $orderFile = fopen(ORDER_EXPORT_FILE, 'w');
-        foreach($orders as $order) {
-            fputcsv($orderFile, $order);
-        }
-        fclose($orderFile);
-
-        $log[] = 'Exported '.count($orders).' Orders';
-
-        $invoiceFile = fopen(INVOICE_EXPORT_FILE, 'w');
-        foreach($invoices as $invoice) {
-            fputcsv($invoiceFile, $invoice);
-        }
-        fclose($invoiceFile);
-
-        $log[] = 'Exported '.count($invoices).' Invoices';
+    $orderFile = fopen(ORDER_EXPORT_FILE, 'w');
+    foreach($orders as $order) {
+        fputcsv($orderFile, $order);
     }
+    fclose($orderFile);
 
-    // save orders
-    $orderFp = fopen($exportedOrderCache, 'w');
-    fwrite($orderFp, implode(',', $exportedOrders));
-    fclose($orderFp);
+    array_unshift($log, logMessage('Exported '.count($orders).' Orders, Skipped '.count($log).' Orders'));
+    $logFile = dirname(ORDER_EXPORT_FILE)."/export-".date('Y_m_d').'.log';
+    $handle = fopen($logFile, "w");
+    fwrite($handle, implode("\r\n", $log)."\r\n");
 
-    // save invoices
-    $invoiceFp = fopen($exportedInvoiceCache, 'w');
-    fwrite($invoiceFp, implode(',', $exportedInvoices));
-    fclose($invoiceFp);
-    return $log;
-
-}
-
-function install() {
-    $exportedOrderCache = __DIR__.'/exports/exportedOrderIds.txt';
-    $exportedInvoiceCache = __DIR__.'/exports/exportedInvoiceIds.txt';
-    $orderFp = fopen($exportedOrderCache, 'w');
-    fclose($orderFp);
-    $invoiceFp = fopen($exportedInvoiceCache, 'w');
-    fclose($invoiceFp);
-    return export(true);
 }
