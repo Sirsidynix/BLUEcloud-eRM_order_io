@@ -34,15 +34,23 @@ class Order extends IO
         $invoices = $resourceAcquisition->getResourcePayments();
         $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
 
-        $errors = [];
+        // skip empty orders
+        if(empty($resourceAcquisition->resourceID)) {
+            throw new Exception('no resource id', 1);
+        }
 
         //--- Dates
         $this->subsStartDate = $resourceAcquisition->subscriptionStartDate;
         $this->subsEndDate = $resourceAcquisition->subscriptionEndDate;
         // Skip if start and end date are the same
         if ($this->subsStartDate === $this->subsEndDate) {
-            $errors[] = sprintf("Subscription start and end dates not different (%s, %s)", $this->subsStartDate, $this->subsEndDate);
+            $message = sprintf("#%s (%s)", $resource->resourceID, $resource->titleText);
+            throw new Exception($message, 2);
         }
+
+
+        $errors = [];
+
         // Skip if end date is in past
         $now = new DateTime();
         if ($this->subsEndDate < $now->format('Y-m-d')) {

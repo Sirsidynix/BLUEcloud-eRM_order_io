@@ -61,6 +61,7 @@ function import($type) {
 
 function export() {
     $log = [];
+    $resourcesWithoutOrders = [];
 
     $getter = new ResourceAcquisition();
     $resourceAcqusitions = $getter->all();
@@ -73,7 +74,16 @@ function export() {
             $order->instantiateFromErm($ra);
             $orders[] = $order->toFlatArray();
         } catch (Exception $e) {
-            $log[] = logMessage($e->getMessage());
+            switch($e->getCode()) {
+                case 1:
+                    break;
+                case 2:
+                    $resourcesWithoutOrders[] = $e->getMessage();
+                    break;
+                default:
+                    $log[] = logMessage($e->getMessage());
+                    break;
+            }
         }
     }
 
@@ -87,5 +97,10 @@ function export() {
     $logFile = dirname(ORDER_EXPORT_FILE)."/export-".date('Y_m_d').'.log';
     $handle = fopen($logFile, "w");
     fwrite($handle, implode("\r\n", $log)."\r\n");
+
+    array_unshift($resourcesWithoutOrders, logMessage(count($resourcesWithoutOrders).' resources have orders that have the same start and end dates, indicating a system created (ignored) order.'));
+    $logFile = dirname(ORDER_EXPORT_FILE).'/resources-without-orders.log';
+    $handle = fopen($logFile, "w");
+    fwrite($handle, implode("\r\n", $resourcesWithoutOrders)."\r\n");
 
 }
