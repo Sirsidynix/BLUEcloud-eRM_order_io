@@ -35,7 +35,8 @@ class Order extends IO
         $resource  = new Resource(new NamedArguments(array('primaryKey' => $resourceAcquisition->resourceID)));
 
         // skip empty orders
-        if(empty($resourceAcquisition->resourceID)) {
+        $resourceId = $resource->resourceID;
+        if(empty($resourceId)) {
             throw new Exception('no resource id', 1);
         }
 
